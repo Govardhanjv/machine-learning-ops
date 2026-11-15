@@ -2,15 +2,23 @@
 
 Team: 2
 
-Local base URL: `http://127.0.0.1:8000` after `python run.py serve`.
-Interactive documentation: `http://127.0.0.1:8000/docs`.
-Cloud deployment and the live base URL have not yet been verified. Record the verified
-Cloud Run URL in `docs/deployment.md` after deployment.
+Live base URL: https://credit-risk-api-480708713552.us-central1.run.app .
+Interactive documentation: https://credit-risk-api-480708713552.us-central1.run.app/docs .
+Local development uses `http://127.0.0.1:8000` after `python run.py serve`.
+
+The live service is revision `credit-risk-api-00001-dbs`, model version `1`. Health and
+model metadata are verified. Applicant `100021` returned HTTP 200, probability
+`0.10431654676258995`, and `reject` at threshold `0.085`; negative income returned 422,
+and unknown applicant `1` returned 404. The Wednesday checkpoint passed.
 
 ## Endpoints
 
-The examples below use the locally exported, verified model. Set `BASE_URL` to the local
-address above, or to the verified Cloud Run address after deployment.
+Set `BASE_URL` to the live service for these requests. The responses show the key model
+fields and error formats; the corresponding live success and error statuses are verified.
+
+```bash
+BASE_URL=https://credit-risk-api-480708713552.us-central1.run.app
+```
 
 ### GET /health
 
@@ -86,20 +94,25 @@ curl -X POST "$BASE_URL/predict" -H 'Content-Type: application/json' \
 
 ## Response times
 
-A local HTTP measurement on November 13, 2026 used one first request followed by 100 scored
-requests, with zero HTTP errors. `reports/latency_local.json` records p50 **9.61 ms**, p95
-**10.32 ms**, maximum **14.47 ms**, and mean **9.73 ms**. The first measured request took
-**62.5 ms**. Model loading had already completed, so this first request is not a measured
-Cloud Run cold start. The local server used `127.0.0.1:8045` to avoid conflicts with other
-development services. These timings exclude network travel to Google Cloud.
+Measured from the client Mac on November 15, 2026 with
+`python run.py latency --url https://credit-risk-api-480708713552.us-central1.run.app --n 100`.
+The service received no test requests for 20 minutes, from 16:47:11 to 17:07:11 UTC,
+before the first measured request. The first request was timed separately; the next
+100 requests were used for the warm response-time summary.
 
-p50 is the median wait: half of successful measured requests were at or below that time.
-p95 is the 95th percentile: roughly five percent were slower. p95 therefore helps describe
-the longer delays an applicant might see on a loan screen. The required live service
-measurement remains to be taken after deployment with
-`python run.py latency --url <verified service URL>`; that command will write
-`reports/latency.json` for the submission. A first request measures a cold start only when
-no instance is already running.
+| Measurement | Result |
+|---|---:|
+| First request after idle | 172.3 ms |
+| Warm requests | 100 |
+| Warm p50 | 73.79 ms |
+| Warm p95 | 89.72 ms |
+| Warm maximum | 100.11 ms |
+| Warm mean | 75.74 ms |
+| HTTP errors | 0 |
+
+`reports/latency.json` contains the actual measurements. These are client-to-service
+times, including network travel to Google Cloud. p50 is the median wait; p95 shows the
+slower end of the response times that an applicant could experience.
 
 ## Online or batch scoring?
 
